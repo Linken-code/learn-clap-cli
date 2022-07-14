@@ -1,24 +1,103 @@
 // Note: this requires the `derive` feature
+use std::ffi::OsString;
+use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{Args, Parser, Subcommand};
 
-/// Simple program to greet a person
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Args {
-    /// Name of the person to greet
-    #[clap(short, long)]
-    name: String,
-
-    /// Number of times to greet
-    #[clap(short, long, default_value_t = 1)]
-    count: u8,
+/// A fictional versioning CLI
+#[derive(Debug, Parser)]
+#[clap(name = "git")]
+#[clap(about = "A fictional versioning CLI", long_about = None)]
+struct Cli {
+    #[clap(subcommand)]
+    command: Commands,
 }
-//-n linken -c 3
-fn main() {
-    let args = Args::parse();
 
-    for _ in 0..args.count {
-        println!("Hello {}!", args.name)
+#[derive(Debug, Subcommand)]
+enum Commands {
+    /// Clones repos
+    #[clap(arg_required_else_help = true)]
+    Clone {
+        /// The remote to clone
+        remote: String,
+    },
+    /// pushes things
+    #[clap(arg_required_else_help = true)]
+    Push {
+        /// The remote to target
+        remote: String,
+    },
+    /// adds things
+    #[clap(arg_required_else_help = true)]
+    Add {
+        /// Stuff to add
+        #[clap(required = true, parse(from_os_str))]
+        path: Vec<PathBuf>,
+    },
+    Stash(Stash),
+    #[clap(external_subcommand)]
+    External(Vec<OsString>),
+}
+
+#[derive(Debug, Args)]
+#[clap(args_conflicts_with_subcommands = true)]
+struct Stash {
+    #[clap(subcommand)]
+    command: Option<StashCommands>,
+
+    #[clap(flatten)]
+    push: StashPush,
+}
+
+#[derive(Debug, Subcommand)]
+enum StashCommands {
+    Push(StashPush),
+    Pop { stash: Option<String> },
+    Apply { stash: Option<String> },
+}
+
+#[derive(Debug, Args)]
+struct StashPush {
+    #[clap(short, long)]
+    message: Option<String>,
+}
+// clone abstract
+// add debug
+// push txt
+//stash push -m fsf
+//stash pop abc
+//gitlab  stash apply  abc
+fn main() {
+    let args = Cli::parse();
+
+    match args.command {
+        Commands::Clone { remote } => {
+            println!("Cloning {}", remote);
+        }
+        Commands::Push { remote } => {
+            println!("Pushing to {}", remote);
+        }
+        Commands::Add { path } => {
+            println!("Adding {:?}", path);
+        }
+        Commands::Stash(stash) => {
+            let stash_cmd = stash.command.unwrap_or(StashCommands::Push(stash.push));
+            match stash_cmd {
+                StashCommands::Push(push) => {
+                    println!("Pushing {:?}", push);
+                }
+                StashCommands::Pop { stash } => {
+                    println!("Popping {:?}", stash);
+                }
+                StashCommands::Apply { stash } => {
+                    println!("Applying {:?}", stash);
+                }
+            }
+        }
+        Commands::External(args) => {
+            println!("Calling out to {:?} with {:?}", &args[0], &args[1..]);
+        }
     }
+
+    // Continued program logic goes here...
 }
