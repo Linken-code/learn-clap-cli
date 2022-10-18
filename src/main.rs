@@ -1,24 +1,20 @@
-// Note: this requires the `derive` feature
+use console::Term;
+use console::{style, Emoji, Style};
+use std::error::Error;
+use std::thread;
+use std::time::Duration;
 
-use clap::Parser;
+//颜色输出
+fn main() -> Result<(), Box<dyn Error>> {
+    let term = Term::stdout();
+    term.write_line("Hello World!")?;
+    thread::sleep(Duration::from_millis(2000));
+    term.clear_line()?;
+    println!("This is {} neat", style("quite").cyan());
+    let cyan = Style::new().green();
+    println!("This is {} neat", cyan.apply_to("quite"));
+    println!("[3/4] {}Downloading ...", Emoji("🚚 ", "--"));
+    println!("[4/4] {} Done!", Emoji("✨", ":-)"));
 
-/// Simple program to greet a person
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Args {
-    /// Name of the person to greet
-    #[clap(short, long)]
-    name: String,
-
-    /// Number of times to greet
-    #[clap(short, long, default_value_t = 1)]
-    count: u8,
-}
-//-n linken -c 3
-fn main() {
-    let args = Args::parse();
-
-    for _ in 0..args.count {
-        println!("Hello {}!", args.name)
-    }
+    Ok(())
 }
