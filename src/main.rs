@@ -1,20 +1,103 @@
-use console::Term;
-use console::{style, Emoji, Style};
-use std::error::Error;
-use std::thread;
-use std::time::Duration;
+// Note: this requires the `derive` feature
+use std::ffi::OsString;
+use std::path::PathBuf;
 
-//颜色输出
-fn main() -> Result<(), Box<dyn Error>> {
-    let term = Term::stdout();
-    term.write_line("Hello World!")?;
-    thread::sleep(Duration::from_millis(2000));
-    term.clear_line()?;
-    println!("This is {} neat", style("quite").cyan());
-    let cyan = Style::new().green();
-    println!("This is {} neat", cyan.apply_to("quite"));
-    println!("[3/4] {}Downloading ...", Emoji("🚚 ", "--"));
-    println!("[4/4] {} Done!", Emoji("✨", ":-)"));
+use clap::{Args, Parser, Subcommand};
 
-    Ok(())
+/// A fictional versioning CLI
+#[derive(Debug, Parser)]
+#[clap(name = "git")]
+#[clap(about = "A fictional versioning CLI", long_about = None)]
+struct Cli {
+    #[clap(subcommand)]
+    command: Commands,
+}
+
+#[derive(Debug, Subcommand)]
+enum Commands {
+    /// Clones repos
+    #[clap(arg_required_else_help = true)]
+    Clone {
+        /// The remote to clone
+        remote: String,
+    },
+    /// pushes things
+    #[clap(arg_required_else_help = true)]
+    Push {
+        /// The remote to target
+        remote: String,
+    },
+    /// adds things
+    #[clap(arg_required_else_help = true)]
+    Add {
+        /// Stuff to add
+        #[clap(required = true, parse(from_os_str))]
+        path: Vec<PathBuf>,
+    },
+    Stash(Stash),
+    #[clap(external_subcommand)]
+    External(Vec<OsString>),
+}
+
+#[derive(Debug, Args)]
+#[clap(args_conflicts_with_subcommands = true)]
+struct Stash {
+    #[clap(subcommand)]
+    command: Option<StashCommands>,
+
+    #[clap(flatten)]
+    push: StashPush,
+}
+
+#[derive(Debug, Subcommand)]
+enum StashCommands {
+    Push(StashPush),
+    Pop { stash: Option<String> },
+    Apply { stash: Option<String> },
+}
+
+#[derive(Debug, Args)]
+struct StashPush {
+    #[clap(short, long)]
+    message: Option<String>,
+}
+// clone abstract
+// add debug
+// push txt
+//stash push -m fsf
+//stash pop abc
+//gitlab  stash apply  abc
+fn main() {
+    let args = Cli::parse();
+
+    match args.command {
+        Commands::Clone { remote } => {
+            println!("Cloning {}", remote);
+        }
+        Commands::Push { remote } => {
+            println!("Pushing to {}", remote);
+        }
+        Commands::Add { path } => {
+            println!("Adding {:?}", path);
+        }
+        Commands::Stash(stash) => {
+            let stash_cmd = stash.command.unwrap_or(StashCommands::Push(stash.push));
+            match stash_cmd {
+                StashCommands::Push(push) => {
+                    println!("Pushing {:?}", push);
+                }
+                StashCommands::Pop { stash } => {
+                    println!("Popping {:?}", stash);
+                }
+                StashCommands::Apply { stash } => {
+                    println!("Applying {:?}", stash);
+                }
+            }
+        }
+        Commands::External(args) => {
+            println!("Calling out to {:?} with {:?}", &args[0], &args[1..]);
+        }
+    }
+
+    // Continued program logic goes here...
 }
